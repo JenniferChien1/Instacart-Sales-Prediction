@@ -1,0 +1,72 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Mar 31 15:42:22 2022
+
+@author: Hsinichien
+
+
+"""
+
+import pandas as pd
+import numpy as np
+import gc
+from sklearn.model_selection import train_test_split
+import xgboost as xgb
+
+main = pd.read_csv('main_for_xgboost_v2_addF_0331.csv')
+
+# split train, test
+test_user = pd.read_csv('test_user.csv')
+test_user_list = test_user['user_id'].tolist()
+test = main[main['user_id'].isin(test_user_list)]
+
+train_user = pd.read_csv('train_user.csv')
+train_user_list = train_user['user_id'].tolist()
+data = main[main['user_id'].isin(train_user_list)]
+
+del main
+del test_user, test_user_list, train_user, train_user_list, orders
+gc.collect()
+
+y = data['y'].to_frame()
+x = data.drop(columns=['y','user_id','product_id','aisle_id'])
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.9, random_state=555)
+
+# model training 
+data_train = xgb.DMatrix(x_train, label=y_train)
+data_test = xgb.DMatrix(x_test, label=y_test)
+watch_list = [(data_test, 'eval'), (data_train, 'train')]
+param = {'max_depth': 3, 'eta': 0.1, 'silent': 1, 'objective': 'binary:logistic'}
+
+bst = xgb.train(param, data_train, num_boost_round=60, evals=watch_list)
+y_hat = bst.predict(data_test)
+
+# predicting
+test = test.sort_values(['user_id', 'product_id']).reset_index(drop=1)
+x_eval = test.drop(columns=['y','user_id','product_id','aisle_id'])
+data_eval = xgb.DMatrix(x_eval)
+y_hat_eval = bst.predict(data_eval)
+
+# concat prediction
+test_list = test[['user_id','product_id']]
+test_concat = pd.concat([test_list,pd.DataFrame(y_hat_eval)],axis=1).rename(columns = {0:'rate'})
+test_concat.sort_values(['user_id','rate'], inplace=True, ascending=False)
+test_concat = test_concat.reset_index(drop=1)
+
+f_107 = pd.read_csv('107_user_average_products_in_basket.csv',index_col=None)
+f_107['average_purchase'] =f_107['average_purchase'].astype(int)
+test_concat_1 = pd.merge(test_concat,f_107,how='left',on='user_id')
+test_concat_1['set'] = 1
+test_concat_1['rank'] = test_concat_1.groupby(['user_id'])['set'].cumsum()
+
+test_concat_2 = test_concat_1.query('average_purchase>=rank')
+
+# prepare submission
+test_product_list = test_concat_2.groupby('user_id').product_id.apply(list).reset_index()
+test_user = pd.read_csv('test_user.csv')
+submission = pd.merge(test_user, test_product_list, on='user_id', how='left')
+submission = submission.drop(columns=['Unnamed: 0','user_id'])
+submission = submission.rename(columns={'product_id': 'products'})
+
+submission.to_csv('submission_f107_addF.csv',index=False)
