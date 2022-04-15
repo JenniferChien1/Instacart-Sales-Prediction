@@ -1,0 +1,42 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 29 20:06:26 2022
+
+@author: hsinichien
+"""
+
+import pandas as pd
+import numpy as np
+
+orders_raw = pd.read_csv('orders.csv')
+order_prod_prior = pd.read_csv('order_products__prior.csv')
+order_prod_train = pd.read_csv('order_products__train.csv')
+f_113 = pd.read_csv('113_user_days_since_prior_prior_order.csv')
+f_114 = pd.read_csv('114_user_days_between_prior_priorprior.csv')
+
+itemNum_prior = pd.pivot_table(order_prod_prior, index='order_id', values='product_id', aggfunc='count').reset_index()
+itemNum_train = pd.pivot_table(order_prod_train, index='order_id', values='product_id', aggfunc='count').reset_index()
+itemNum = pd.concat([itemNum_prior,itemNum_train], axis=0).rename(columns={'product_id':'item_num'})
+
+orders = pd.merge(orders_raw, itemNum, how='left', on='order_id')
+orders = orders.sort_values(['user_id','order_number']).reset_index(drop=1)
+
+orders['t_1_item_num'] = orders.groupby('user_id')['item_num'].shift(1)
+orders['t_2_item_num'] = orders.groupby('user_id')['t_1_item_num'].shift(1)
+orders['t_3_item_num'] = orders.groupby('user_id')['t_2_item_num'].shift(1)
+
+f_115 = pd.merge(f_113, orders, how='left', on='order_id')
+f_115 = pd.merge(f_115, f_114, how='left', on='order_id').drop_duplicates()
+f_115_final = f_115[['order_id', 'user_id', 'eval_set', 'order_number', 'order_dow',
+'order_hour_of_day', 'days_since_prior_order', 'item_num',
+'t_1_item_num', 't_2_item_num', 't_3_item_num', 'days_since_prior_order_t1', 'days_since_prior_order_t2']]
+
+# items number needed per day
+# formula_t_1: ['t_1_item_num'] / ['days_since_prior_order']
+# formula_t_2: ['t_1_item_num']+['t_2_item_num'] / ['days_since_prior_order_t1']
+# formula_t_3: ['t_1_item_num']+['t_2_item_num']+['t_3_item_num'] / ['days_since_prior_order_t2']
+f_115_final['item_num_perday_t1'] = f_115_final['t_1_item_num']/ (f_115_final['days_since_prior_order']+1)
+f_115_final['item_num_perday_t2'] = (f_115_final['t_1_item_num']+f_115_final['t_2_item_num'])/ (f_115_final['days_since_prior_order_t1']+1)
+f_115_final['item_num_perday_t3'] = (f_115_final['t_1_item_num']+f_115_final['t_2_item_num']+f_115_final['t_3_item_num'])/ (f_115_final['days_since_prior_order_t2']+1)
+
+f_115_final.to_csv('115_item_num_perday.csv', index=False)
