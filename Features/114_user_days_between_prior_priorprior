@@ -1,0 +1,24 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 29 19:33:41 2022
+
+@author: Student
+"""
+import pandas as pd
+
+orders_raw = pd.read_csv('orders.csv')
+
+orders_raw['order_number_rev'] = orders_raw.groupby('user_id').order_number.transform(np.max) - orders_raw.order_number
+
+orders_rev_0 = orders_raw[orders_raw['order_number_rev']==0]
+orders_rev_1 = orders_raw[orders_raw['order_number_rev']==1]
+orders_rev_2 = orders_raw[orders_raw['order_number_rev']==2]
+orders_rev_0_1_2 = pd.concat([orders_rev_0,orders_rev_1,orders_rev_2], axis=0)
+
+orders_rev_0_1_2 = orders_rev_0_1_2.sort_values(by=['user_id','order_number']).reset_index(drop=1)
+orders_rev_0_1_2['days_since_prior_order_t2'] = orders_rev_0_1_2.groupby(['user_id'])['days_since_prior_order'].cumsum()
+
+f_114 = orders_rev_0_1_2[orders_rev_0_1_2['eval_set']!='prior']
+f_114_final = f_114[['order_id','user_id','days_since_prior_order_t2']]
+
+f_114_final.to_csv('114_user_days_between_prior_priorprior.csv', index=False)
