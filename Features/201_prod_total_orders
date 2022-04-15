@@ -1,0 +1,21 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar  7 17:22:35 2022
+
+@author: hsinichien
+"""
+
+import pandas as pd
+
+main = pd.read_csv('main.csv')
+
+series_201 = main['product_id'].value_counts()
+
+df_201 = series_201.to_frame()
+
+df_201 = df_201.reset_index()
+
+df_201.rename(columns={'index': 'product_id', 
+                       'product_id': 'prod_total_orders'}, inplace=True)
+
+df_201.to_csv('201_prod_total_orders.csv', index=False)
