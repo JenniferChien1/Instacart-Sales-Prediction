@@ -1,0 +1,30 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar  7 22:35:21 2022
+
+@author: hsinichien
+"""
+
+# By product_id: how many users had reordered the product / how many users had ordered the product
+
+import pandas as pd
+
+main = pd.read_csv('main.csv')
+
+# Count how many users had reordered the product
+
+reordered_1 = main[main['reordered'] == 1]
+df_reordered = reordered_1.groupby(['product_id', 'user_id']).size()
+df_reordered = df_reordered.groupby(['product_id']).size().reset_index(name='count_users_reordered')
+
+# Count how many users had ordered the product
+
+df_ordered = main.groupby(['product_id', 'user_id']).size()
+df_ordered = df_ordered.groupby(['product_id']).size().reset_index(name='count_users_ordered')
+
+# Calculate prod_reorder_by_users_ratio
+
+df_204 = pd.merge(df_ordered, df_reordered, how='left', on='product_id')
+df_204 = df_204.fillna(0)
+df_204['prod_reorder_by_users_ratio'] = df_204['count_users_reordered'] / df_204['count_users_ordered']
+df_204.to_csv('204_prod_reorder_by_users_ratio.csv', index=False)
