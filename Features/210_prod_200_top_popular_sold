@@ -1,0 +1,16 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar  7 22:05:32 2022
+
+@author: hsinichien
+"""
+
+import pandas as pd
+
+df_201 = pd.read_csv('201_prod_total_orders.csv')
+
+df_210 = df_201.sort_values(['prod_total_orders'], ascending=False)
+
+df_210 = df_210.drop(['Unnamed: 0'], axis=1)
+
+df_210.to_csv('210_prod_200_top_popular_sold.csv', index=False)
