@@ -1,0 +1,23 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar  7 20:33:51 2022
+
+@author: hsinichien
+"""
+
+import pandas as pd
+
+main = pd.read_csv('main.csv')
+
+reordered_1 = main[main['reordered'] == 1]
+
+series_202 = reordered_1['product_id'].value_counts()
+
+df_202 = series_202.to_frame()
+
+df_202 = df_202.reset_index()
+
+df_202.rename(columns={'index': 'product_id', 
+                       'product_id': 'prod_times_reordered'}, inplace=True)
+
+df_202.to_csv('202_prod_times_reordered.csv', index=False)
