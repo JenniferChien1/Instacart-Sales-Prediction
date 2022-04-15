@@ -1,0 +1,35 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Mar 31 14:55:23 2022
+
+@author: hsinichien
+"""
+
+import pandas as pd
+import numpy as np
+import gc
+
+main = pd.read_csv('main_for_xgboost_v2.csv')
+
+# read f0-f2, f301-f302
+f0 = pd.read_csv('f0_aisle_purchase_count.csv')
+f1 = pd.read_csv('f1_avg_add_cart_mix.csv')
+f2 = pd.read_csv('f2_avg_add_cart_prod.csv')
+f301 = pd.read_csv('301_mix_days_since_last_order.csv')
+f302 = pd.read_csv('302_mix_order_rate.csv')
+
+# add asile
+products = pd.read_csv('products.csv')
+data = pd.merge(main, products[['product_id','aisle_id']], how='left', on='product_id').drop_duplicates()
+
+del main
+gc.collect()
+
+# add f0-f2, f301-f302
+data = pd.merge(data, f0, how='left', on='aisle_id').drop_duplicates()
+data = pd.merge(data, f1, how='left', on=['user_id','product_id']).drop_duplicates()
+data = pd.merge(data, f2, how='left', on=['product_id']).drop_duplicates()
+data = pd.merge(data, f301, how='left', on=['user_id','product_id']).drop_duplicates()
+data = pd.merge(data, f302[['user_id','product_id','order_rate']], how='left', on=['user_id','product_id']).drop_duplicates()
+
+data.to_csv('main_for_xgboost_v2_addF_0331.csv',index=False)
