@@ -8,9 +8,7 @@ Created on Mon Mar  7 20:54:32 2022
 import pandas as pd
 
 df_201 = pd.read_csv('201_prod_total_orders.csv')
-
 df_202 = pd.read_csv('202_prod_times_reordered.csv')
-
 merge = pd.merge(df_201, df_202, how='left', on='product_id')
 
 # recheck if data merged reasonable 
@@ -20,7 +18,5 @@ merge = merge.drop(['Unnamed: 0_x'], axis=1)
 merge = merge.drop(['Unnamed: 0_y'], axis=1)
 
 df_203 = merge.dropna(subset=['prod_times_reordered'])
-
 df_203['prod_reorder_ratio'] = df_203['prod_times_reordered'] / df_203['prod_total_orders']
-
 df_203.to_csv('203_prod_reorder_ratio.csv', index=False)
